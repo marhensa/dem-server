@@ -23,11 +23,14 @@ VRT_NAME="baking.vrt"
 MAX_ZOOM=18
 
 # ---- Memory Safety Limits (Prevent OOM) ----
-# Restrict GDAL and OpenMP from consuming all RAM/CPU
-export GDAL_CACHEMAX=512       # Limit cache to 512MB
-export GDAL_NUM_THREADS=1      # Disable GDAL multithreading
-export OMP_NUM_THREADS=2       # Limit ctb-tile worker threads (safe default)
-export CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif # Optimization
+# Aggressive memory constraints for stability
+export GDAL_CACHEMAX=256       # Lower cache to 256MB
+export GDAL_NUM_THREADS=1      # Force single-threaded GDAL
+export OMP_NUM_THREADS=1       # Force single-threaded ctb-tile (critical for OOM)
+export CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif
+
+# Ensure disk buffers are flushed before heavy lifting
+sync # Optimization
 
 # ---- Determine Paths based on REGION ----
 if [ -n "$REGION" ]; then
