@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marhensa DEM Server - Cesium JS</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.122/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.122/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        #cesiumContainer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+        .cesium-viewer-bottom { display: none !important; }
+        #status { position: absolute; top: 12px; left: 12px; z-index: 10; background: rgba(0, 0, 0, 0.75); color: #fff; padding: 14px 18px; border-radius: 8px; font-size: 13px; line-height: 1.6; width: 260px; max-width: calc(50vw - 40px); backdrop-filter: blur(8px); }
+        #status h3 { margin: 10px 0 5px; font-size: 14px; color: #7dd3fc; border-bottom: 1px solid rgba(125, 211, 252, 0.3); padding-bottom: 4px; }
+        #status h3:first-child { margin-top: 0; }
+        .row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+        .row select { width: 100%; max-width: 100%; box-sizing: border-box; }
+        .label { color: #94a3b8; }
+        .val { color: #e2e8f0; font-family: monospace; }
+        .ok { color: #4ade80; }
+        .err { color: #f87171; }
+
+        /* Responsive: smaller font on narrow screens */
+        @media (max-width: 500px) {
+            #status, #controls { font-size: 11px; padding: 10px 12px; }
+            #status h3, #controls h3 { font-size: 12px; }
+            #controls input[type="range"] { width: 100px; }
+            #controls .range-val { display: none; }
+        }
+        #controls { position: absolute; top: 12px; right: 12px; z-index: 10; background: rgba(0, 0, 0, 0.75); color: #fff; padding: 14px 18px; border-radius: 8px; font-size: 13px; max-width: calc(50vw - 40px); backdrop-filter: blur(8px); }
+        #controls h3 { margin: 0 0 10px; font-size: 14px; color: #7dd3fc; }
+        #controls label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
+        #controls input[type="range"] { width: 140px; accent-color: #7dd3fc; }
+        #controls .range-val { font-family: monospace; color: #e2e8f0; min-width: 32px; text-align: right; }
+        #coords { position: absolute; bottom: 8px; right: 8px; z-index: 10; background: rgba(0, 0, 0, 0.7); color: #e2e8f0; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+        #footer { position: absolute; bottom: 36px; right: 8px; z-index: 10; background: rgba(0, 0, 0, 0.5); color: rgba(255,255,255,0.7); padding: 3px 8px; border-radius: 4px; font-size: 10px; text-align: right; pointer-events: none; }
+
+        /* Panel collapse functionality */
+        #status, #controls {
+            transition: width 0.3s ease, height 0.3s ease, padding 0.3s ease;
+        }
+        .panel-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: rgba(125, 211, 252, 0.2);
+            border: 1px solid rgba(125, 211, 252, 0.4);
+            border-radius: 4px;
+            color: #7dd3fc;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 22px;
+            text-align: center;
+            z-index: 11;
+            padding: 0;
+        }
+        .panel-toggle:hover {
+            background: rgba(125, 211, 252, 0.4);
+        }
+        #status.collapsed, #controls.collapsed {
+            width: 40px !important;
+            height: 40px !important;
+            padding: 8px;
+            overflow: hidden;
+        }
+        #status.collapsed > *:not(.panel-toggle),
+        #controls.collapsed > *:not(.panel-toggle) {
+            display: none;
+        }
+        #status.collapsed .panel-toggle,
+        #controls.collapsed .panel-toggle {
+            position: static;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <div id="status">
+        <button class="panel-toggle" id="toggle-status" title="Collapse panel">‹</button>
+        <h3 id="viewer-title">DEM Terrain:<br><span id="viewer-region">Integrated</span></h3>
+        <div class="row">
+            <span class="label">Go to Region</span>
+            <select id="region-selector" style="background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 4px; font-size: 12px; padding: 2px 4px; cursor: pointer;">
+                <option value="">Integrated (All Regions)</option>
+                <option value="sumatra">Sumatra</option>
+                <option value="jawa">Jawa</option>
+                <option value="balinusra">Balinusra</option>
+                <option value="kalimantan">Kalimantan</option>
+                <option value="sulawesi">Sulawesi</option>
+                <option value="maluku">Maluku</option>
+                <option value="papua">Papua</option>
+            </select>
+        </div>
+        <div class="row"><span class="label">Status</span><span id="terrain-status" class="val">connecting...</span></div>
+        <div class="row"><span class="label">Cursor Elev.</span><span id="cursor-elev" class="val">--</span></div>
+        <h3>Current Camera View</h3>
+        <div class="row"><span class="label">Longitude</span><span id="cam-lon" class="val">--</span></div>
+        <div class="row"><span class="label">Latitude</span><span id="cam-lat" class="val">--</span></div>
+        <div class="row"><span class="label">Height (Alt)</span><span id="cam-height" class="val">--</span></div>
+        <div class="row"><span class="label">Heading</span><span id="cam-heading" class="val">--</span></div>
+        <div class="row"><span class="label">Pitch</span><span id="cam-pitch" class="val">--</span></div>
+        <div class="row"><span class="label">Roll</span><span id="cam-roll" class="val">--</span></div>
+    </div>
+    <div id="controls">
+        <button class="panel-toggle" id="toggle-controls" title="Collapse panel">›</button>
+        <h3>Controls</h3>
+        <label><input type="checkbox" id="toggle-terrain" checked><span>3D Terrain</span></label>
+        <label><input type="range" id="exaggeration" min="0.5" max="5" step="0.1" value="1.0"><span class="range-val" id="exag-val">1.0</span></label>
+        <label><input type="checkbox" id="toggle-lighting"><span>Globe Lighting</span></label>
+        <label><input type="checkbox" id="toggle-wireframe"><span>Wireframe</span></label>
+        <button id="btn-reset-view" style="margin-top: 12px; width: 100%; padding: 8px; background: #7dd3fc; border: none; border-radius: 4px; color: #000; font-weight: bold; cursor: pointer; font-size: 12px;">Reset View</button>
+    </div>
+    <div id="coords">--</div>
+    <div id="footer">Marhensa | Badan Informasi Geospasial DEM | Mesh Hub | Cesium</div>
+
+    <script>
+    // Specific POC Coordinates for Manado
+    const POC_VIEW = { 
+        destination: Cesium.Cartesian3.fromDegrees(124.922735, 1.440927, 540.6), 
+        orientation: { 
+            heading: Cesium.Math.toRadians(74.94), 
+            pitch: Cesium.Math.toRadians(-27.98), 
+            roll: 0 
+        } 
+    };
+    const INDONESIA_VIEW = { destination: Cesium.Cartesian3.fromDegrees(118, -2, 5000000) };
+    
+    let viewer, terrainProvider;
+
+    async function init() {
+        const params = new URLSearchParams(window.location.search);
+        // Default to 'sulawesi' if missing param (Initial load)
+        const region = params.has('region') ? params.get('region') : 'sulawesi';
+        
+        document.getElementById('region-selector').value = region;
+        document.getElementById('region-selector').onchange = (e) => {
+            window.location.search = `?region=${e.target.value}`;
+        };
+
+        if (region) {
+            document.getElementById('viewer-region').textContent = region.toUpperCase();
+        } else {
+            document.getElementById('viewer-region').textContent = "Integrated";
+        }
+
+
+        viewer = new Cesium.Viewer('cesiumContainer', {
+            baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false,
+            timeline: false, animation: false, infoBox: false, selectionIndicator: false,
+            navigationHelpButton: false, fullscreenButton: false,
+            baseLayer: new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({
+                url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                maximumLevel: 19, credit: 'Esri'
+            }))
+        });
+
+        // Set initial camera view
+        const initialCamera = (region === 'sulawesi') ? POC_VIEW : INDONESIA_VIEW;
+        viewer.camera.setView(initialCamera);
+        viewer.scene.globe.depthTestAgainstTerrain = true;
+
+        try {
+            // ALWAYS use the National Hub endpoint for terrain data
+            const terrainUrl = `${window.location.origin}/tiles/`;
+            
+            console.log(`Loading Integrated Terrain Hub: ${terrainUrl}`);
+            terrainProvider = await Cesium.CesiumTerrainProvider.fromUrl(terrainUrl, { requestVertexNormals: true });
+            
+            viewer.terrainProvider = terrainProvider;
+            document.getElementById('terrain-status').textContent = 'Integrated Hub Ready';
+            document.getElementById('terrain-status').className = 'val ok';
+
+            // Auto-fly for specific regional navigation (if not the default Sulawesi load)
+            if (region && region !== 'sulawesi') {
+                const response = await fetch(`${window.location.origin}/tiles/${region}/layer.json`);
+                const layerData = await response.json();
+                if (layerData.bounds) {
+                    viewer.camera.flyTo({
+                        destination: Cesium.Rectangle.fromDegrees(layerData.bounds[0], layerData.bounds[1], layerData.bounds[2], layerData.bounds[3]),
+                        duration: 2
+                    });
+                }
+            }
+
+        } catch (e) {
+            document.getElementById('terrain-status').textContent = 'Hub Offline';
+            document.getElementById('terrain-status').className = 'val err';
+            console.warn('Terrain load failed:', e.message);
+            viewer.camera.setView(INDONESIA_VIEW);
+        }
+
+        setupControls(viewer);
+        setupPanelCollapse();
+        viewer.camera.changed.addEventListener(updateCameraReadout);
+        updateCameraReadout();
+    }
+
+    function setupPanelCollapse() {
+        const statusPanel = document.getElementById('status');
+        const controlsPanel = document.getElementById('controls');
+        const toggleStatus = document.getElementById('toggle-status');
+        const toggleControls = document.getElementById('toggle-controls');
+
+        toggleStatus.onclick = () => {
+            statusPanel.classList.toggle('collapsed');
+            toggleStatus.textContent = statusPanel.classList.contains('collapsed') ? '›' : '‹';
+        };
+
+        toggleControls.onclick = () => {
+            controlsPanel.classList.toggle('collapsed');
+            toggleControls.textContent = controlsPanel.classList.contains('collapsed') ? '‹' : '›';
+        };
+
+        function checkPanelOverlap() {
+            const statusCollapsed = statusPanel.classList.contains('collapsed');
+            const controlsCollapsed = controlsPanel.classList.contains('collapsed');
+            
+            if (statusCollapsed && controlsCollapsed) return;
+
+            const statusRect = statusPanel.getBoundingClientRect();
+            const controlsRect = controlsPanel.getBoundingClientRect();
+            const gap = 20;
+
+            if (statusRect.right + gap > controlsRect.left) {
+                if (!statusCollapsed) {
+                    statusPanel.classList.add('collapsed');
+                    toggleStatus.textContent = '›';
+                }
+                if (!controlsCollapsed) {
+                    controlsPanel.classList.add('collapsed');
+                    toggleControls.textContent = '‹';
+                }
+            }
+        }
+
+        window.addEventListener('resize', checkPanelOverlap);
+        checkPanelOverlap();
+    }
+
+    function updateCameraReadout() {
+        const cam = viewer.camera;
+        const carto = cam.positionCartographic;
+        document.getElementById('cam-lon').textContent = Cesium.Math.toDegrees(carto.longitude).toFixed(6);
+        document.getElementById('cam-lat').textContent = Cesium.Math.toDegrees(carto.latitude).toFixed(6);
+        document.getElementById('cam-height').textContent = carto.height.toFixed(1) + 'm';
+        document.getElementById('cam-heading').textContent = Cesium.Math.toDegrees(cam.heading).toFixed(2);
+        document.getElementById('cam-pitch').textContent = Cesium.Math.toDegrees(cam.pitch).toFixed(2);
+        document.getElementById('cam-roll').textContent = Cesium.Math.toDegrees(cam.roll).toFixed(2);
+    }
+
+    function setupControls(viewer) {
+        document.getElementById('btn-reset-view').onclick = () => {
+            const region = new URLSearchParams(window.location.search).get('region') || 'sulawesi';
+            viewer.camera.flyTo(region === 'sulawesi' ? POC_VIEW : INDONESIA_VIEW);
+        };
+        document.getElementById('toggle-terrain').onchange = (e) => viewer.terrainProvider = e.target.checked ? terrainProvider : new Cesium.EllipsoidTerrainProvider();
+        document.getElementById('exaggeration').oninput = (e) => { viewer.scene.verticalExaggeration = parseFloat(e.target.value); document.getElementById('exag-val').textContent = e.target.value; };
+        document.getElementById('toggle-lighting').onchange = (e) => viewer.scene.globe.enableLighting = e.target.checked;
+        document.getElementById('toggle-wireframe').onchange = (e) => { if (viewer.scene.globe._surface) viewer.scene.globe._surface.tileProvider._debug.wireframe = e.target.checked; };
+
+        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction((m) => {
+            const cartesian = viewer.scene.pickPosition(m.endPosition);
+            if (Cesium.defined(cartesian)) {
+                const carto = Cesium.Cartographic.fromCartesian(cartesian);
+                document.getElementById('cursor-elev').textContent = `${carto.height.toFixed(1)}m`;
+                document.getElementById('coords').textContent = `${Cesium.Math.toDegrees(carto.latitude).toFixed(5)}, ${Cesium.Math.toDegrees(carto.longitude).toFixed(5)} | ${carto.height.toFixed(1)}m`;
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    }
+    init();
+    </script>
+</body>
+</html>

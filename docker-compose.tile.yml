@@ -1,0 +1,30 @@
+# =============================================================================
+# Cesium Terrain Tiling & Packing - Docker Compose
+#
+# Workflow:
+# 1. Bake: COG -> Folder of .terrain files (Quantized Mesh)
+# 2. Pack: Folder -> Single deployment archive (.tar.gz)
+#
+# Usage:
+#   podman compose -f docker-compose.tile.yml run --rm tile
+#   podman compose -f docker-compose.tile.yml run --rm pack
+# =============================================================================
+
+services:
+  # 1. Calculate 3D geometry and save to folder
+  tile:
+    image: docker.io/tumgis/ctb-quantized-mesh:latest
+    environment:
+      - REGION=${REGION:-}
+    volumes:
+      - ./data:/data
+      - ./scripts:/scripts
+    entrypoint: ["/bin/bash", "/scripts/tile.sh"]
+
+  # 2. Pack the folder into a single file for easy deployment
+  pack:
+    image: alpine:latest
+    volumes:
+      - ./data:/data
+    working_dir: /data
+    command: ["tar", "-czf", "terrain_tiles.tar.gz", "tiles/"]

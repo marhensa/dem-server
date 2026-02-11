@@ -1,0 +1,90 @@
+# =============================================================================
+# Integrated DEM Server - VPS Deployment (Cloudflare Tunnel)
+#
+# Specific configuration for VPS with Cloudflare Tunnel running on 'cfnet'.
+#
+# Usage:
+#   podman compose -f docker-compose-vps.yml up -d
+#
+# Cloudflare Dashboard Configuration:
+#   Service Type: HTTP
+#   URL: viewer-gateway:80
+# =============================================================================
+
+services:
+  # 1. PNG Terrain Server Hub (MapLibre / Leaflet)
+  png-terrain-server-hub:
+    image: ghcr.io/developmentseed/titiler:1.1.1
+    container_name: png-terrain-server-hub
+    volumes:
+      - ./data:/data:ro
+      - ./scripts:/scripts:ro
+    command:
+      - uvicorn
+      - scripts.png_terrain_hub:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --workers
+      - "1" # Reduced to 1 worker to minimize RAM footprint on 1GB VPS
+    environment:
+      - PYTHONPATH=/
+      - CPL_TMPDIR=/tmp
+      - GDAL_CACHEMAX=128 # Fixed 128MB cache (prevents 75% RAM "ballooning" crashes)
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR # Speed up COG access
+      - GDAL_HTTP_MERGE_CONSECUTIVE_RANGES=YES # Optimize network requests
+      - GDAL_NUM_THREADS=1 # Prevent multi-threaded CPU spikes on single-core VPS
+      - VSI_CACHE=TRUE
+      - VSI_CACHE_SIZE=33554432 # Reduced to 32MB
+      - TITILER_API_CORS_ORIGINS=*
+    deploy:
+      resources:
+        limits:
+          memory: 400M # Hard limit to prevent container from taking down the VPS
+    restart: unless-stopped
+    networks:
+      - default
+
+  # 2. Quantized Mesh Server Hub (CesiumJS)
+  quantized-mesh-server-hub:
+    image: ghcr.io/developmentseed/titiler:1.1.1
+    container_name: quantized-mesh-server-hub
+    volumes:
+      - ./data:/data:ro
+      - ./scripts:/scripts:ro
+    command:
+      - uvicorn
+      - scripts.mesh_terrain_hub:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8001"
+    environment:
+      - PYTHONPATH=/
+    restart: unless-stopped
+    networks:
+      - default
+
+  # 3. Viewer Gateway (Nginx Hub)
+  viewer-gateway:
+    image: nginx:alpine
+    container_name: viewer-gateway
+    # Note: Keep port 3333 exposed for local VPS debugging if needed
+    ports:
+      - "3333:80"
+    volumes:
+      - ./test:/usr/share/nginx/html:ro
+      - ./data/tiles:/data/tiles:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - default
+      - cfnet
+
+networks:
+  # Define the external Cloudflare Tunnel network
+  cfnet:
+    external: true
+  default:
+    driver: bridge

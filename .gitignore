@@ -1,0 +1,14 @@
+# Data directories
+data/cogs/
+data/tiles/
+data/terrain_tiles.tar.gz
+data/mosaic*.json
+
+# Intermediate files
+data/*.vrt
+data/*_filled.tif
+data/dem_cog.tif
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,30 @@
+# =============================================================================
+# DEM Preprocessing - Docker Compose
+#
+# Services:
+#   preprocess - Converts raw NLP TIFFs into Cloud Optimized GeoTIFFs (COGs)
+#   mosaic     - Generates MosaicJSON index for all COGs in data/cogs/
+#
+# Usage:
+#   docker compose -f docker-compose.preprocess.yml run --rm preprocess
+#   docker compose -f docker-compose.preprocess.yml run --rm mosaic
+# =============================================================================
+
+services:
+  # Batch convert NLP Grid TIFFs to COGs
+  preprocess:
+    image: ghcr.io/osgeo/gdal:alpine-small-3.12.1
+    volumes:
+      - ./data:/data
+      - ./scripts:/scripts
+    entrypoint: ["/bin/bash", "/scripts/preprocess.sh"]
+
+  # Generate MosaicJSON for seamless MapLibre/Leaflet coverage
+  mosaic:
+    image: ghcr.io/developmentseed/titiler:1.1.1
+    environment:
+      - REGION=${REGION:-}
+    volumes:
+      - ./data:/data
+      - ./scripts:/scripts
+    entrypoint: ["/bin/bash", "/scripts/mosaic.sh"]
