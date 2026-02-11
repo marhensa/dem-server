@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================================================
 # DEM Preprocessing Script (Batch Mode - Recursive)
-# Converts each NLP GeoTIFF in data/source/ into a Cloud Optimized GeoTIFF (COG)
-# logic: 1:1 conversion (NLP TIF -> NLP COG) mirroring directory structure.
+# Converts each NLP GeoTIFF/BIL in data/source/ into a Cloud Optimized GeoTIFF (COG)
+# logic: 1:1 conversion (NLP TIF/BIL -> NLP COG) mirroring directory structure.
 #
 # This script runs inside a GDAL Docker container.
 # Usage: docker compose -f docker-compose.preprocess.yml run --rm preprocess
@@ -14,24 +14,24 @@ SOURCE_DIR="/data/source"
 OUTPUT_DIR="/data/cogs"
 
 echo "============================================="
-echo "  DEM Batch Preprocessing: NLP TIF -> COG"
+echo "  DEM Batch Preprocessing: NLP TIF/BIL -> COG"
 echo "============================================="
 
 # ---- Check for source files ----
-TIFF_COUNT=$(find "$SOURCE_DIR" \( -name "*.tif" -o -name "*.tiff" \) 2>/dev/null | wc -l)
+TIFF_COUNT=$(find "$SOURCE_DIR" \( -name "*.tif" -o -name "*.tiff" -o -name "*.bil" \) 2>/dev/null | wc -l)
 if [ "$TIFF_COUNT" -eq 0 ]; then
     echo ""
-    echo "ERROR: No .tif/.tiff files found in $SOURCE_DIR"
-    echo "       Place your NLP Grid TIFF files in data/source/ and try again."
+    echo "ERROR: No .tif/.tiff/.bil files found in $SOURCE_DIR"
+    echo "       Place your NLP Grid TIFF/BIL files in data/source/ and try again."
     exit 1
 fi
 
 echo ""
-echo "Found $TIFF_COUNT source TIFF file(s). Starting batch conversion..."
+echo "Found $TIFF_COUNT source file(s). Starting batch conversion..."
 
 # ---- Process each file ----
 # Use find to handle subdirectories and spaces
-find "$SOURCE_DIR" \( -name "*.tif" -o -name "*.tiff" \) -print0 | while IFS= read -r -d '' INPUT_FILE; do
+find "$SOURCE_DIR" \( -name "*.tif" -o -name "*.tiff" -o -name "*.bil" \) -print0 | while IFS= read -r -d '' INPUT_FILE; do
     # Calculate relative path to source root to mirror folder structure
     FILE_PATH="${INPUT_FILE#$SOURCE_DIR/}"
     DIR_PATH=$(dirname "$FILE_PATH")
