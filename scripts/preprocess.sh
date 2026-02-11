@@ -66,6 +66,8 @@ find "$SOURCE_DIR" \( -name "*.tif" -o -name "*.tiff" -o -name "*.bil" \) -print
     fi
 
     # Step 1: Replace NoData with 0 (sea level)
+    # Filter out "Warning 1: Value 0" which occurs when merging valid 0s with nodata 0s.
+    # This is expected behavior for this pipeline (unifying voids and sea level).
     echo "  - Filling NoData (-32767 -> 0)..."
     gdalwarp \
         -srcnodata "-32767" \
@@ -73,7 +75,7 @@ find "$SOURCE_DIR" \( -name "*.tif" -o -name "*.tiff" -o -name "*.bil" \) -print
         -overwrite \
         -q \
         "$INPUT_FILE" \
-        "$TEMP_FILE"
+        "$TEMP_FILE" 2>&1 | { grep -v "Warning 1: Value 0" || true; }
 
     # Step 2: Convert to Cloud Optimized GeoTIFF
     echo "  - Converting to COG..."
