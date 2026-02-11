@@ -163,33 +163,33 @@ CTB performs this one-time "baking" process, converting continuous raster elevat
 A **DEM file** (Digital Elevation Model) and **Terrain Tiles** serve completely different purposes in the geospatial stack:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         DEM FILE (GeoTIFF/COG)                              │
-│                                                                             │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         DEM FILE (GeoTIFF/COG)                             │
+│                                                                            │
 │   • Single continuous raster file                                          │
 │   • Each pixel = one elevation value (Float32 or Int16)                    │
 │   • Georeferenced with coordinate system metadata                          │
 │   • Used for: GIS analysis, watershed modeling, slope calculation          │
 │   • Accessed by: GDAL, QGIS, ArcGIS, Python/rasterio                       │
 │   • Size: 1 file, megabytes to gigabytes                                   │
-│                                                                             │
+│                                                                            │
 │   Example: DTM_Sulawesi_1m.tif (500 MB, 25000×20000 pixels)                │
-└─────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     │  ctb-tile (one-time conversion)
                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      TERRAIN TILES (Quantized Mesh)                         │
-│                                                                             │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                      TERRAIN TILES (Quantized Mesh)                        │
+│                                                                            │
 │   • Millions of small binary files in {z}/{x}/{y}.terrain pyramid          │
 │   • Each tile = triangulated 3D mesh (vertices + indices)                  │
 │   • Tiled in TMS/WMTS scheme for efficient streaming                       │
 │   • Used for: 3D globe visualization in web browsers                       │
 │   • Accessed by: CesiumJS, Cesium for Unreal, deck.gl                      │
 │   • Size: Millions of files, 1-50 KB each                                  │
-│                                                                             │
+│                                                                            │
 │   Example: tiles/sulawesi/14/8234/5621.terrain (12 KB, ~500 triangles)     │
-└─────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Key differences:**
@@ -220,23 +220,23 @@ A **DEM file** (Digital Elevation Model) and **Terrain Tiles** serve completely 
 When you run `ctb-tile -f Mesh`, here's what happens for each output tile:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 1: Tile Bounds Calculation                                            │
-│                                                                             │
+┌────────────────────────────────────────────────────────────────────────────┐
+│  STEP 1: Tile Bounds Calculation                                           │
+│                                                                            │
 │  For tile (z=14, x=8234, y=5621):                                          │
-│  • Calculate geographic bounds from TMS grid                                │
+│  • Calculate geographic bounds from TMS grid                               │
 │  • West: 124.5°, South: 1.2°, East: 124.522°, North: 1.222°                │
-└─────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 2: Raster Sampling                                                    │
-│                                                                             │
-│  • Read elevation values from source DEM within tile bounds                 │
-│  • Resample to appropriate resolution for this zoom level                   │
-│  • Handle NoData values (replace with 0 or interpolate)                     │
+┌────────────────────────────────────────────────────────────────────────────┐
+│  STEP 2: Raster Sampling                                                   │
+│                                                                            │
+│  • Read elevation values from source DEM within tile bounds                │
+│  • Resample to appropriate resolution for this zoom level                  │
+│  • Handle NoData values (replace with 0 or interpolate)                    │
 │  • Result: Regular grid of elevation samples (e.g., 65×65 points)          │
-└─────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -249,12 +249,12 @@ When you run `ctb-tile -f Mesh`, here's what happens for each output tile:
 │  • Result: Optimized mesh with 100-2000 triangles (varies by terrain)       │
 │                                                                             │
 │  Flat area:          Steep slope:                                           │
-│  ┌─────────┐         ┌─────────┐                                           │
-│  │ ╲     ╱ │         │╲│╲│╲│╲│ │                                           │
-│  │   ╲ ╱   │         │─┼─┼─┼─┤ │  ← More triangles where                   │
-│  │   ╱ ╲   │         │╱│╱│╱│╱│ │    terrain changes rapidly                │
-│  │ ╱     ╲ │         │─┼─┼─┼─┤ │                                           │
-│  └─────────┘         └─────────┘                                           │
+│  ┌─────────┐         ┌─────────┐                                            │
+│  │ ╲     ╱ │         │╲│╲│╲│╲│ │                                            │
+│  │   ╲ ╱   │         │─┼─┼─┼─┤ │  ← More triangles where                    │
+│  │   ╱ ╲   │         │╱│╱│╱│╱│ │    terrain changes rapidly                 │
+│  │ ╱     ╲ │         │─┼─┼─┼─┤ │                                            │
+│  └─────────┘         └─────────┘                                            │
 │  (4 triangles)       (32 triangles)                                         │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -263,10 +263,10 @@ When you run `ctb-tile -f Mesh`, here's what happens for each output tile:
 │  STEP 4: Quantization                                                       │
 │                                                                             │
 │  • Convert vertex positions from float64 world coords to uint16 tile coords │
-│  • X: longitude → 0-32767 (west edge = 0, east edge = 32767)               │
-│  • Y: latitude  → 0-32767 (south edge = 0, north edge = 32767)             │
-│  • Z: elevation → 0-32767 (min height = 0, max height = 32767)             │
-│  • Apply zigzag encoding: value → (value << 1) ^ (value >> 15)             │
+│  • X: longitude → 0-32767 (west edge = 0, east edge = 32767)                │
+│  • Y: latitude  → 0-32767 (south edge = 0, north edge = 32767)              │
+│  • Z: elevation → 0-32767 (min height = 0, max height = 32767)              │
+│  • Apply zigzag encoding: value → (value << 1) ^ (value >> 15)              │
 │  • Apply delta encoding: store difference from previous value               │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -284,11 +284,11 @@ When you run `ctb-tile -f Mesh`, here's what happens for each output tile:
 │  STEP 6: Binary Serialization + Compression                                 │
 │                                                                             │
 │  • Write header: tile center (ECEF), bounding sphere, height range          │
-│  • Write vertex buffers: u[], v[], height[] (all delta+zigzag encoded)     │
+│  • Write vertex buffers: u[], v[], height[] (all delta+zigzag encoded)      │
 │  • Write triangle indices (high-water mark encoded)                         │
 │  • Write edge indices                                                       │
 │  • Gzip compress entire payload                                             │
-│  • Save as {z}/{x}/{y}.terrain                                             │
+│  • Save as {z}/{x}/{y}.terrain                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -306,7 +306,7 @@ When you run `ctb-tile -f Mesh`, here's what happens for each output tile:
 ```
 ┌─────────────────────┐      ┌─────────────────────┐      ┌─────────────────────┐
 │    Source COGs      │      │     VRT Mosaic      │      │      ctb-tile       │
-│  (Float32 raster)   │ ───▶ │  (Virtual index)    │ ───▶ │    -f Mesh -s 18    │
+│  (Float32 raster)   │ ───▶ │  (Virtual index)    │ ───▶ │    -f Mesh -s 18   │
 │  data/cogs/*.tif    │      │  gdalbuildvrt       │      │                     │
 └─────────────────────┘      └─────────────────────┘      └──────────┬──────────┘
                                                                      │
@@ -315,11 +315,11 @@ When you run `ctb-tile -f Mesh`, here's what happens for each output tile:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                        Quantized Mesh Output                                │
 │  data/tiles/{region}/                                                       │
-│  ├── layer.json          (Metadata: bounds, available zooms, format)       │
-│  ├── 0/0/0.terrain       (Zoom 0: 1 tile, entire region)                   │
-│  ├── 1/...               (Zoom 1: up to 4 tiles)                           │
+│  ├── layer.json          (Metadata: bounds, available zooms, format)        │
+│  ├── 0/0/0.terrain       (Zoom 0: 1 tile, entire region)                    │
+│  ├── 1/...               (Zoom 1: up to 4 tiles)                            │
 │  ├── ...                                                                    │
-│  └── 18/{x}/{y}.terrain  (Zoom 18: ~1.19m/pixel, millions of tiles)        │
+│  └── 18/{x}/{y}.terrain  (Zoom 18: ~1.19m/pixel, millions of tiles)         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 

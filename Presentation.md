@@ -109,7 +109,7 @@ Kami membangun sebuah **pipeline otomatis** yang:
     └──────┬──────┘
            │
     ┌──────▼──────────────────────────────────────────┐
-    │              data/cogs/                          │
+    │              data/cogs/                         │
     │  ├── sulawesi/  ├── jawa/  ├── sumatra/ ...     │
     └──────┬──────────────────┬───────────────────────┘
            │                  │
@@ -207,15 +207,15 @@ Membuat sebuah **MosaicJSON** — indeks spasial yang "menjahit" ribuan lembaran
 ### Bagaimana MosaicJSON Bekerja
 
 ```
-┌─────────────────────────────────────────────┐
-│              MosaicJSON                      │
-│                                              │
-│  "Untuk tile di koordinat X,Y → baca        │
+┌───────────────────────────────────────────────┐
+│              MosaicJSON                       │
+│                                               │
+│  "Untuk tile di koordinat X,Y → baca          │
 │   file COG #1247 di byte range 45000-46000" │
-│                                              │
-│  Satu file JSON, mengindeks ribuan COG      │
-│  TiTiler membaca indeks ini on-the-fly      │
-└─────────────────────────────────────────────┘
+│                                               │
+│  Satu file JSON, mengindeks ribuan COG        │
+│  TiTiler membaca indeks ini on-the-fly        │
+└───────────────────────────────────────────────┘
 ```
 
 - **Tidak ada duplikasi data** — indeks hanya berisi pointer ke file COG asli
@@ -448,15 +448,15 @@ Browser (CesiumJS)
     ▼
 ┌──────────────────────────────────────┐
 │  Virtual Mesh Compositor (FastAPI)   │
-│                                       │
-│  /layer.json:                         │
-│    Scan semua folder region           │
-│    Gabungkan bounds & availability    │
-│    Return metadata terintegrasi       │
-│                                       │
+│                                      │
+│  /layer.json:                        │
+│    Scan semua folder region          │
+│    Gabungkan bounds & availability   │
+│    Return metadata terintegrasi      │
+│                                      │
 │  /{z}/{x}/{y}.terrain:               │
-│    Cari tile di semua folder region   │
-│    Return file pertama yang cocok     │
+│    Cari tile di semua folder region  │
+│    Return file pertama yang cocok    │
 └──────────────────────────────────────┘
 ```
 
@@ -776,21 +776,21 @@ viewer.terrainProvider = terrainProvider;
 
 ```
 CesiumJS Browser                          Mesh Hub Server
-    │                                          │
-    │  GET /tiles/layer.json                   │
+    │                                           │
+    │  GET /tiles/layer.json                    │
     │ ────────────────────────────────────────► │
-    │                                          │ Scan semua region
-    │  ◄──────── { bounds, available, ... }    │ Gabungkan metadata
-    │                                          │
-    │  (User zoom in ke Manado)                │
-    │                                          │
-    │  GET /tiles/14/27756/11262.terrain       │
+    │                                           │ Scan semua region
+    │  ◄──────── { bounds, available, ... }     │ Gabungkan metadata
+    │                                           │
+    │  (User zoom in ke Manado)                 │
+    │                                           │
+    │  GET /tiles/14/27756/11262.terrain        │
     │ ────────────────────────────────────────► │
-    │                                          │ Cek: sulawesi/14/27756/11262.terrain
-    │  ◄──────── [binary gzip mesh data]       │ Ada! Return file
-    │                                          │
-    │  (GPU decode mesh, render 3D)            │
-    │                                          │
+    │                                           │ Cek: sulawesi/14/27756/11262.terrain
+    │  ◄──────── [binary gzip mesh data]        │ Ada! Return file
+    │                                           │
+    │  (GPU decode mesh, render 3D)             │
+    │                                           │
 ```
 
 ### 2. Fitur Viewer
@@ -1223,25 +1223,25 @@ Internet → Cloudflare Tunnel → viewer-gateway (Nginx) → Hub services
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                INFRASTRUKTUR BIG                     │
-│                                                      │
+│                INFRASTRUKTUR BIG                    │
+│                                                     │
 │  ┌──────────────────────┐  ┌──────────────────────┐ │
 │  │  ArcGIS Image Server │  │  DEM Server Pipeline │ │
 │  │  (Server Existing)   │  │  (POC Ini)           │ │
 │  │                      │  │                      │ │
 │  │  • Governance        │  │  • Web delivery      │ │
 │  │  • Analisis tingkat  │  │  • 3D visualisasi    │ │
-│  │    lanjut            │  │  • Terrain streaming  │ │
+│  │    lanjut            │  │  • Terrain streaming │ │
 │  │  • Desktop GIS       │  │  • Browser-based     │ │
 │  │  • Kontrol akses     │  │  • Open source       │ │
 │  └──────────┬───────────┘  └──────────┬───────────┘ │
-│             │                          │             │
-│             └──────────┬───────────────┘             │
-│                        │                             │
-│              ┌─────────▼─────────┐                   │
-│              │  Data DEM BIG     │                   │
-│              │  (Sumber Tunggal) │                   │
-│              └───────────────────┘                   │
+│             │                          │            │
+│             └──────────┬───────────────┘            │
+│                        │                            │
+│              ┌─────────▼─────────┐                  │
+│              │  Data DEM BIG     │                  │
+│              │  (Sumber Tunggal) │                  │
+│              └───────────────────┘                  │
 └─────────────────────────────────────────────────────┘
 ```
 
