@@ -38,6 +38,18 @@ find "$SOURCE_DIR" \( -name "*.tif" -o -name "*.tiff" -o -name "*.bil" \) -print
     FILENAME=$(basename "$FILE_PATH")
     BASENAME="${FILENAME%.*}"
     
+    # Check for BIL companion files
+    if [[ "${FILENAME##*.}" == "bil" ]]; then
+        if [ ! -f "${INPUT_FILE%.*}.hdr" ]; then
+            echo "  - ERROR: Missing .hdr file! BIL format requires a companion .hdr file. Skipping $FILENAME"
+            continue
+        fi
+        if [ ! -f "${INPUT_FILE%.*}.prj" ]; then
+            echo "  - ERROR: Missing .prj file! BIL format requires a companion .prj file. Skipping $FILENAME"
+            continue
+        fi
+    fi
+    
     # Ensure output subdirectory exists
     mkdir -p "${OUTPUT_DIR}/${DIR_PATH}"
     
