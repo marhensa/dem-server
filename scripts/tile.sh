@@ -111,14 +111,30 @@ ctb-tile \
 
 # ---- Step 3: Generate layer.json Metadata ----
 echo ""
-echo "[3/3] Generating layer.json metadata..."
-ctb-tile \
-    -f Mesh \
-    -l \
-    -s "$MAX_ZOOM" \
-    -e 0 \
-    -o "$OUTPUT_DIR" \
-    "$VRT_FILE"
+echo "[3/3] Generating layer.json metadata (Safe Mode)..."
+
+# Note: We avoid 'ctb-tile -l' because it causes OOM on large datasets.
+# Instead, we write a standard layer.json with global bounds.
+# Cesium will try to load tiles and get 404s for empty areas, which is fine.
+
+cat <<EOF > "$OUTPUT_DIR/layer.json"
+{
+  "tilejson": "2.1.0",
+  "name": "terrain",
+  "description": "Quantized Mesh Terrain",
+  "version": "1.1.0",
+  "format": "quantized-mesh-1.0",
+  "scheme": "tms",
+  "extensions": ["octvertexnormals", "watermask", "metadata"],
+  "tiles": ["{z}/{x}/{y}.terrain"],
+  "minzoom": 0,
+  "maxzoom": $MAX_ZOOM,
+  "bounds": [-180, -90, 180, 90],
+  "projection": "EPSG:4326"
+}
+EOF
+
+echo "  Generated static layer.json at $OUTPUT_DIR/layer.json"
 
 # Cleanup temp files
 rm -f "/tmp/baking_list.txt"
