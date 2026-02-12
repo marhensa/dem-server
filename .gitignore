@@ -12,4 +12,5 @@ data/dem_cog.tif
 
 # OS junk
 .DS_Store
+.ruff_cache/
 Thumbs.db
