@@ -22,22 +22,21 @@ OUTPUT_BASE_DIR="/data/tiles"
 VRT_NAME="baking.vrt"
 MAX_ZOOM=18
 
-# ---- Performance Optimization (Balanced Mode) ----
-# Use 50% of available cores to prevent OOM kills on memory-intensive tasks
+# ---- Performance Optimization (Linear Speed Mode) ----
+# STABILITY FIX: Process one tile at a time, but use ALL cores for that tile.
+# This minimizes RAM usage (preventing OOM) while maximizing CPU usage.
 TOTAL_CORES=$(nproc 2>/dev/null || echo 4)
-CPU_COUNT=$(( TOTAL_CORES / 2 ))
-if [ "$CPU_COUNT" -lt 1 ]; then CPU_COUNT=1; fi
 
-export GDAL_CACHEMAX=2048      # 2GB Cache (High performance but stable)
-export GDAL_NUM_THREADS=$CPU_COUNT
-export OMP_NUM_THREADS=$CPU_COUNT
-export CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif # Optimization
-export VRT_SHARED_SOURCE=1     # Efficient VRT file handle usage
+export GDAL_CACHEMAX=1024      # 1GB Cache (Moderate)
+export GDAL_NUM_THREADS=1      # Sequential I/O (Critical for stability)
+export OMP_NUM_THREADS=$TOTAL_CORES  # Use ALL cores for math (Mesh generation)
+export CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif 
+export VRT_SHARED_SOURCE=1     
 
-echo "Performance Settings (Balanced):"
-echo "  - Total Cores: $TOTAL_CORES"
-echo "  - Active Threads: $CPU_COUNT"
-echo "  - GDAL Cache: $GDAL_CACHEMAX MB"
+echo "Performance Settings (Linear Speed):"
+echo "  - CPU Strategy: Single-Tile Multi-Core"
+echo "  - Math Threads: $OMP_NUM_THREADS"
+echo "  - GDAL Threads: 1 (Sequential Read)"
 
 # ---- Determine Paths based on REGION ----
 if [ -n "$REGION" ]; then
