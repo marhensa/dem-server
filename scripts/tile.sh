@@ -22,20 +22,22 @@ OUTPUT_BASE_DIR="/data/tiles"
 VRT_NAME="baking.vrt"
 MAX_ZOOM=18
 
-# ---- Performance Optimization (Workstation Mode) ----
-# Detect available CPUs to maximize parallel processing
-CPU_COUNT=$(nproc 2>/dev/null || echo 4)
+# ---- Performance Optimization (Balanced Mode) ----
+# Use 50% of available cores to prevent OOM kills on memory-intensive tasks
+TOTAL_CORES=$(nproc 2>/dev/null || echo 4)
+CPU_COUNT=$(( TOTAL_CORES / 2 ))
+if [ "$CPU_COUNT" -lt 1 ]; then CPU_COUNT=1; fi
 
-export GDAL_CACHEMAX=4096      # 4GB Cache (Speed up input reading)
-export GDAL_NUM_THREADS=ALL_CPUS
+export GDAL_CACHEMAX=2048      # 2GB Cache (High performance but stable)
+export GDAL_NUM_THREADS=$CPU_COUNT
 export OMP_NUM_THREADS=$CPU_COUNT
 export CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif # Optimization
 export VRT_SHARED_SOURCE=1     # Efficient VRT file handle usage
 
-echo "Performance Settings:"
-echo "  - CPU Cores: $CPU_COUNT"
+echo "Performance Settings (Balanced):"
+echo "  - Total Cores: $TOTAL_CORES"
+echo "  - Active Threads: $CPU_COUNT"
 echo "  - GDAL Cache: $GDAL_CACHEMAX MB"
-echo "  - Worker Threads: $OMP_NUM_THREADS"
 
 # ---- Determine Paths based on REGION ----
 if [ -n "$REGION" ]; then
