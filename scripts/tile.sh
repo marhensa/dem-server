@@ -22,21 +22,18 @@ OUTPUT_BASE_DIR="/data/tiles"
 VRT_NAME="baking.vrt"
 MAX_ZOOM=18
 
-# ---- Performance Optimization (Linear Speed Mode) ----
-# STABILITY FIX: Process one tile at a time, but use ALL cores for that tile.
-# This minimizes RAM usage (preventing OOM) while maximizing CPU usage.
-TOTAL_CORES=$(nproc 2>/dev/null || echo 4)
+# ---- Performance Optimization (Safe Workstation Mode) ----
+# Use conservative thread count to prevent OOM kills on high-zoom terrain baking.
+# ctb-tile memory scales with thread count; 4 threads is stable for 16GB+ systems.
+export GDAL_CACHEMAX=1024      # 1GB Cache
+export GDAL_NUM_THREADS=1      # Sequential I/O (stable)
+export OMP_NUM_THREADS=4       # 4 cores for mesh math (prevents OOM)
+export CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif
+export VRT_SHARED_SOURCE=1
 
-export GDAL_CACHEMAX=1024      # 1GB Cache (Moderate)
-export GDAL_NUM_THREADS=1      # Sequential I/O (Critical for stability)
-export OMP_NUM_THREADS=$TOTAL_CORES  # Use ALL cores for math (Mesh generation)
-export CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif 
-export VRT_SHARED_SOURCE=1     
-
-echo "Performance Settings (Linear Speed):"
-echo "  - CPU Strategy: Single-Tile Multi-Core"
+echo "Performance Settings (Safe Workstation):"
 echo "  - Math Threads: $OMP_NUM_THREADS"
-echo "  - GDAL Threads: 1 (Sequential Read)"
+echo "  - GDAL Cache: $GDAL_CACHEMAX MB"
 
 # ---- Determine Paths based on REGION ----
 if [ -n "$REGION" ]; then
